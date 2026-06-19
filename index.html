@@ -6,6 +6,9 @@
   <title>gandalf sax</title>
   <link rel="preload" href="giphy.gif" as="image" crossorigin="anonymous">
   <link rel="preload" href="epicsaxguy.mp3" as="audio" crossorigin="anonymous">
+  <link rel="icon" id="favicon" href="favicon.png" type="image/png">
+  <!-- fallback for browsers that prefer gif -->
+  <link rel="icon" href="giphy.gif" type="image/gif">
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -60,7 +63,7 @@
     </div>
   </div>
 
-  <audio id="audio" src="epicsaxguy.mp3" preload="auto"></audio>
+  <audio id="audio" src="epicsaxguy.mp3" loop preload="auto"></audio>
 
   <script>
     (function () {
@@ -82,6 +85,35 @@
         gifVideo.addEventListener('loadedmetadata', () => {
           if (gifVideo.duration > 0) GIF_DUR = gifVideo.duration;
         });
+      }
+
+      // Favicon animation: draw current video frame to small canvas and set as icon
+      // This makes the favicon animate in all browsers by using data URLs.
+      const favicon = document.getElementById('favicon');
+      const favCanvas = document.createElement('canvas');
+      favCanvas.width = 32;
+      favCanvas.height = 32;
+      const favCtx = favCanvas.getContext('2d');
+      let lastFavUpdate = 0;
+
+      function updateFavicon() {
+        const now = performance.now();
+        if (now - lastFavUpdate < 66) return; // throttle to ~15 fps
+        lastFavUpdate = now;
+        if (!gifVideo || !favicon || gifVideo.readyState < 2) return;
+        favCtx.clearRect(0, 0, 32, 32);
+        const vw = gifVideo.videoWidth || 500;
+        const vh = gifVideo.videoHeight || 250;
+        // cover like the main player
+        const scale = Math.max(32 / vw, 32 / vh);
+        const dw = vw * scale;
+        const dh = vh * scale;
+        const dx = (32 - dw) / 2;
+        const dy = (32 - dh) / 2;
+        favCtx.drawImage(gifVideo, dx, dy, dw, dh);
+        try {
+          favicon.href = favCanvas.toDataURL('image/png');
+        } catch (e) {}
       }
 
       function updateDuration(d) {
@@ -133,6 +165,8 @@
 
         console.log(`[AUDIO RATE] t=${(now/1000).toFixed(3)} ideal=${ideal.toFixed(3)} curr=${audio.currentTime.toFixed(3)} err=${error.toFixed(4)} agg=${aggressive} maxDev=${maxDev} gain=${gain} → rate=${rate.toFixed(4)}`);
         audio.playbackRate = rate;
+
+        updateFavicon();
 
         // GIF video rate (only speed after initial currentTime set)
         if (gifVideo) {
@@ -251,8 +285,8 @@
 
       audio.addEventListener('ended', () => {
         if (isPlaying) {
+          // Audio has native loop; just boost convergence window on each natural loop point
           convergeUntil = Date.now() + 1800;
-          audio.currentTime = 0;
         }
       });
 
@@ -262,6 +296,13 @@
       if (gifVideo) {
         gifVideo.play().catch(() => {});
       }
+
+      // Continuous favicon animation loop (teaser before click, synced after)
+      function faviconLoop() {
+        updateFavicon();
+        requestAnimationFrame(faviconLoop);
+      }
+      faviconLoop();
     })();
   </script>
 </body>
