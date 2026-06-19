@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>gandalf sax</title>
+  <link rel="preload" href="giphy.gif" as="image" crossorigin="anonymous">
+  <link rel="preload" href="epicsaxguy.mp3" as="audio" crossorigin="anonymous">
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -19,21 +21,40 @@
       overflow: hidden;
       cursor: pointer;
     }
-    #gif-container img {
+    #gif-container video {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
-      object-position: center;
-      image-rendering: auto;
+    }
+
+    #start-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      color: #f4c95d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      font-size: 1rem;
+      text-transform: uppercase;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <div id="gif-container">
-    <img id="gif" src="giphy.gif" alt="Gandalf playing the saxophone">
+    <video id="gif-video" src="giphy.webm" loop muted playsinline></video>
+  </div>
+
+  <div id="start-overlay">
+    <div style="text-align:center; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <div style="font-size: 2.2rem; font-weight: 700; letter-spacing: 6px; margin-bottom: 8px;">CLICK TO START</div>
+      <div style="font-size: 0.8rem; opacity: 0.6; letter-spacing: 3px;">GANDALF SAX GUY — SYNCED</div>
+    </div>
   </div>
 
   <audio id="audio" src="epicsaxguy.mp3" preload="auto"></audio>
@@ -42,6 +63,7 @@
     (function () {
       const audio = document.getElementById('audio');
       const gifContainer = document.getElementById('gif-container');
+      const gifVideo = document.getElementById('gif-video');
 
       let period = 29.71;
       let lastEpoch = -1;
@@ -50,6 +72,14 @@
       let rafId = null;
       let isPlaying = false;
       let started = false;
+
+      let GIF_DUR = 0.44;
+
+      if (gifVideo) {
+        gifVideo.addEventListener('loadedmetadata', () => {
+          if (gifVideo.duration > 0) GIF_DUR = gifVideo.duration;
+        });
+      }
 
       function updateDuration(d) {
         if (isFinite(d) && d > 1) period = d;
@@ -63,39 +93,31 @@
         return ((t % period) + period) % period;
       }
 
-      function restartGif() {
-        const img = gifContainer.querySelector('img');
-        if (img) {
-          const src = 'giphy.gif';
-          img.src = '';
-          void img.offsetWidth;
-          img.src = src;
-        } else {
-          gifContainer.innerHTML = '<img id="gif" src="giphy.gif" alt="Gandalf playing the saxophone">';
-        }
-      }
-
       function tightSync() {
         if (!isPlaying) return;
         rafId = requestAnimationFrame(tightSync);
 
-        // Epoch change: restart GIF for visual sync (all devices at exact same wall time).
-        // Do NOT touch audio.currentTime here — let playbackRate converge.
-        const epoch = Math.floor(Date.now() / 1000 / period);
+        const now = Date.now();
+
+        const epoch = Math.floor(now / 1000 / period);
         if (epoch !== lastEpoch) {
           lastEpoch = epoch;
-          restartGif();
-          // Briefly allow faster convergence after the natural loop point
-          convergeUntil = Math.max(convergeUntil, Date.now() + 2500);
+          const newUntil = now + 2500;
+          if (newUntil > convergeUntil) {
+            convergeUntil = newUntil;
+            console.log(`[CONVERGE] epoch boost, convergeUntil in ${(convergeUntil - now)/1000}s`);
+          }
         }
 
-        // Throttled rate adjustment only. No hard seeks after initial start.
-        const now = Date.now();
-        if (now - lastSync < 80) return;
-        lastSync = now;
+        if (now - lastSync < 80) {
+          // still update GIF rate below
+        } else {
+          lastSync = now;
+        }
 
+        // Audio
         const ideal = getPhase();
-        const error = ideal - audio.currentTime; // positive = behind → play faster
+        const error = ideal - audio.currentTime;
 
         const aggressive = now < convergeUntil;
         const maxDev = aggressive ? 0.042 : 0.022;
@@ -106,7 +128,28 @@
           rate = 1 + Math.max(-maxDev, Math.min(maxDev, error * gain));
         }
 
+        console.log(`[AUDIO RATE] t=${(now/1000).toFixed(3)} ideal=${ideal.toFixed(3)} curr=${audio.currentTime.toFixed(3)} err=${error.toFixed(4)} agg=${aggressive} maxDev=${maxDev} gain=${gain} → rate=${rate.toFixed(4)}`);
         audio.playbackRate = rate;
+
+        // GIF video rate (only speed after initial currentTime set)
+        if (gifVideo) {
+          const gdur = GIF_DUR;
+          const t = now / 1000;
+          const gideal = (t % gdur);
+          const gcurr = gifVideo.currentTime;
+          let gerror = gideal - gcurr;
+          if (gerror > gdur / 2) gerror -= gdur;
+          if (gerror < -gdur / 2) gerror += gdur;
+
+          const gmaxDev = aggressive ? 0.05 : 0.025;
+          const ggain = aggressive ? 0.22 : 0.09;
+          let grate = 1.0;
+          if (Math.abs(gerror) > 0.002) {
+            grate = 1 + Math.max(-gmaxDev, Math.min(gmaxDev, gerror * ggain));
+          }
+          gifVideo.playbackRate = grate;
+          console.log(`[GIF RATE] t=${t.toFixed(3)} ideal=${gideal.toFixed(3)} curr=${gcurr.toFixed(3)} err=${gerror.toFixed(4)} agg=${aggressive} maxDev=${gmaxDev} gain=${ggain} → rate=${grate.toFixed(4)}`);
+        }
       }
 
       function stopSync() {
@@ -115,9 +158,8 @@
           rafId = null;
         }
         audio.playbackRate = 1.0;
+        if (gifVideo) gifVideo.playbackRate = 1.0;
       }
-
-      // Note: no pause UI. Once started it runs. Click resyncs, space/r also work.
 
       function startPlayback() {
         if (isPlaying) return;
@@ -126,89 +168,90 @@
         audio.currentTime = phase;
         audio.playbackRate = 1.0;
         lastEpoch = Math.floor(Date.now() / 1000 / period);
+        console.log(`[INIT] audio initial phase=${phase.toFixed(3)} (wall t=${(Date.now()/1000).toFixed(3)})`);
 
         audio.play().then(() => {
           isPlaying = true;
           started = true;
-          // Allow faster rate convergence for the first several seconds
-          // so it pulls into perfect sync smoothly without any further seeks.
-          convergeUntil = Date.now() + 9000;
 
-          // Start the rate-based sync loop after a tiny settle delay.
+          const overlay = document.getElementById('start-overlay');
+          if (overlay) overlay.style.display = 'none';
+
+          if (gifVideo) {
+            gifVideo.play().catch(() => {});
+          }
+
+          convergeUntil = Date.now() + 9000;
+          console.log(`[CONVERGE] initial play boost for 9s`);
+
           setTimeout(() => {
             if (isPlaying) tightSync();
           }, 90);
         }).catch(() => {
-          // If blocked (no gesture), next interaction will retry
           started = false;
         });
       }
 
       function onInteract(e) {
+        const overlay = document.getElementById('start-overlay');
         if (!started) {
+          if (overlay) overlay.style.display = 'none';
           startPlayback();
         } else if (isPlaying) {
-          // Click resync: boost rate convergence for a few seconds (no cut)
           convergeUntil = Date.now() + 5500;
-          const phase = getPhase();
-          if (Math.abs(phase) < 0.45 || Math.abs(phase - period) < 0.45) {
-            restartGif();
-          }
+          console.log(`[CONVERGE] manual resync boost`);
         }
       }
 
-      // Any click on the gif starts (or resyncs)
       gifContainer.addEventListener('click', onInteract);
       gifContainer.addEventListener('touchstart', onInteract, { passive: true });
 
-      // Space also works
+      const startOverlay = document.getElementById('start-overlay');
+      if (startOverlay) {
+        startOverlay.addEventListener('click', onInteract);
+        startOverlay.addEventListener('touchstart', onInteract, { passive: true });
+      }
+
       document.addEventListener('keydown', (e) => {
         if (e.key === ' ' || e.key === 'Spacebar') {
           e.preventDefault();
           onInteract(e);
         }
         if (e.key.toLowerCase() === 'r' && isPlaying) {
-          // Manual resync via rate convergence (smooth, no audio cut)
           convergeUntil = Date.now() + 6000;
-          const p = getPhase();
-          if (Math.abs(p) < 0.45 || Math.abs(p - period) < 0.45) {
-            restartGif();
-          }
+          console.log(`[CONVERGE] manual r resync boost`);
         }
       });
 
-      // Prime audio position immediately (no UI)
       function prime() {
         try { audio.currentTime = getPhase(); } catch (_) {}
+        if (gifVideo) {
+          try { gifVideo.currentTime = (Date.now() / 1000 % GIF_DUR); } catch (_) {}
+        }
       }
       prime();
       audio.addEventListener('loadedmetadata', () => { if (!isPlaying) prime(); });
 
-      // When tab becomes visible, let playbackRate converge back to sync (no hard seek/cut).
-      // We still snap the GIF only near a loop point for visual consistency.
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && isPlaying) {
           convergeUntil = Date.now() + 4500;
           lastEpoch = Math.floor(Date.now() / 1000 / period);
-          const phase = getPhase();
-          if (phase < 0.4 || phase > period - 0.4) {
-            restartGif();
-          }
         }
       });
 
       audio.addEventListener('ended', () => {
         if (isPlaying) {
-          // Natural loop reset at end of clip. Rare if rate convergence is working well.
-          // We still need this to keep audio playing continuously.
           convergeUntil = Date.now() + 1800;
           audio.currentTime = 0;
-          restartGif();
         }
       });
 
-      // Expose for debug only
       window.GANDALF = { getPhase, getPeriod: () => period };
+
+      // Auto play muted video as teaser (rate will be controlled after click)
+      if (gifVideo) {
+        gifVideo.play().catch(() => {});
+      }
     })();
   </script>
 </body>
