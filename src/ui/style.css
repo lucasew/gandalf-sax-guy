@@ -1,0 +1,36 @@
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+#gif-container {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  overflow: hidden;
+  cursor: pointer;
+}
+#gif-container video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#start-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  color: #f4c95d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  font-size: 1rem;
+  text-transform: uppercase;
+  cursor: pointer;
+}

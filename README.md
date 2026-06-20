@@ -14,11 +14,12 @@ Any number of devices opening the page will be playing the **exact same moment**
 
 ## Deploy
 
-Just upload these three files to any static host:
+Just upload these files to any static host:
 
 - `index.html`
 - `giphy.gif`
 - `epicsaxguy.mp3`
+- `src/` (folder containing modules and styles)
 
 Works on:
 - GitHub Pages
