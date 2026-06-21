@@ -1,44 +1,36 @@
 # Gandalf Sax Guy — Synced
 
-A pure static HTML site that plays the GIF and audio perfectly synchronized using the current wall-clock time (Unix timestamp).
+A pure static HTML site that plays video + audio synchronized to wall-clock time (Unix timestamp).
 
-Any number of devices opening the page will be playing the **exact same moment** of the performance.
+Any number of devices opening the page will be playing the **same moment** of the performance.
 
 ## How it works
 
-- Uses `Date.now()` (seconds since epoch) to compute the current position in the loop:  
-  `position = (Date.now() / 1000) % duration`
-- Audio is seeked to the computed position + periodically corrected.
-- GIF is restarted precisely when a new global loop epoch begins, so every client restarts the animation at the identical real-world moment.
+- Uses `Date.now()` to compute phase in the audio loop: `position = (Date.now() / 1000) % duration`
+- Audio starts at the computed phase; a rAF loop nudges `playbackRate` toward the ideal phase (no mid-play seeks).
+- Video (`giphy.webm`) is rate-synced the same way against its own short loop duration.
+- Favicon is a live canvas snapshot of the video frame (~15 fps).
 - No WebSockets, no server, no coordination — just math + wall time.
 
 ## Deploy
 
-Just upload these three files to any static host:
+Upload these files to any static host:
 
 - `index.html`
-- `giphy.gif`
+- `giphy.webm`
 - `epicsaxguy.mp3`
+- `favicon.png` (fallback before the canvas favicon spins up)
 
-Works on:
-- GitHub Pages
-- GitLab Pages
-- Netlify / Vercel (static)
-- Cloudflare Pages
-- S3 + CloudFront / any CDN
-- Even just opening `index.html` locally
+Works on GitHub/GitLab Pages, Netlify/Vercel/Cloudflare static, S3+CDN, or opening `index.html` locally.
 
 ## Controls
 
-- **Play / Pause** button (or press **Space**)
-- **Resync** button (or press **R**)
-- Click the GIF area to resync
-- Automatically recovers when you switch tabs
+- **Click** or **Space** — start (first tap unlocks audio per autoplay policy); after start, click/`R` boosts convergence
+- **Tab focus** — auto-boosts convergence when you return
 
 ## Notes
 
-- The first click is required due to browser autoplay policies.
-- GIFs cannot be seeked frame-by-frame in a normal `<img>`, so we restart them on loop boundaries. This is the standard technique for global-sync memes.
-- Duration is taken from the audio file at runtime (very accurate).
+- First click/tap is required for unmuted audio (browser autoplay policy). Video teaser plays muted before that.
+- Audio duration is read at runtime; video loop length comes from the webm metadata.
 
 Enjoy the sax.
