@@ -65,6 +65,18 @@
 
   <script>
     (function () {
+
+      const ErrorReporter = {
+        report: function(error, context) {
+          // Centralized error reporting per project guidelines
+          if (typeof Sentry !== 'undefined' && Sentry.captureException) {
+            Sentry.captureException(error, { extra: context });
+          } else {
+            console.error('Captured by ErrorReporter:', error, context);
+          }
+        }
+      };
+
       const audio = document.getElementById('audio');
       const gifContainer = document.getElementById('gif-container');
       const gifVideo = document.getElementById('gif-video');
@@ -106,9 +118,7 @@
         const dx = (32 - dw) / 2;
         const dy = (32 - dh) / 2;
         favCtx.drawImage(gifVideo, dx, dy, dw, dh);
-        try {
-          favicon.href = favCanvas.toDataURL('image/png');
-        } catch (_) {}
+        try { favicon.href = favCanvas.toDataURL('image/png'); } catch (err) { ErrorReporter.report(err, { source: 'updateFavicon' }); }
       }
 
       function updateDuration(d) {
@@ -174,11 +184,12 @@
           isPlaying = true;
           started = true;
           if (startOverlay) startOverlay.style.display = 'none';
-          if (gifVideo) gifVideo.play().catch(() => {});
+          if (gifVideo) gifVideo.play().catch((err) => { ErrorReporter.report(err, { source: 'gifVideo.play' }); });
           boostConverge(9000);
           setTimeout(() => { if (isPlaying) tightSync(); }, 90);
-        }).catch(() => {
+        }).catch((err) => {
           started = false;
+          ErrorReporter.report(err, { source: 'audio.play' });
         });
       }
 
@@ -215,9 +226,9 @@
       });
 
       function prime() {
-        try { audio.currentTime = getPhase(); } catch (_) {}
+        try { audio.currentTime = getPhase(); } catch (err) { ErrorReporter.report(err, { source: 'prime:audio.currentTime' }); }
         if (gifVideo) {
-          try { gifVideo.currentTime = (Date.now() / 1000) % videoDur; } catch (_) {}
+          try { gifVideo.currentTime = (Date.now() / 1000) % videoDur; } catch (err) { ErrorReporter.report(err, { source: 'prime:gifVideo.currentTime' }); }
         }
       }
       prime();
@@ -235,7 +246,7 @@
       });
 
       // Muted teaser before click; rate lock-in happens after startPlayback.
-      if (gifVideo) gifVideo.play().catch(() => {});
+      if (gifVideo) gifVideo.play().catch((err) => { ErrorReporter.report(err, { source: 'gifVideo.play' }); });
 
       function faviconLoop() {
         updateFavicon();
