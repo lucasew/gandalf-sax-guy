@@ -65,18 +65,46 @@
 
   <script>
     (function () {
+      const DEFAULT_AUDIO_PERIOD = 29.71;
+      const DEFAULT_VIDEO_DURATION = 0.44;
+      const MS_PER_SEC = 1000;
+      const CONVERGE_BOOST_NEW_EPOCH = 2500;
+      const CONVERGE_BOOST_START = 9000;
+      const CONVERGE_BOOST_INTERACT = 5500;
+      const CONVERGE_BOOST_R_KEY = 6000;
+      const CONVERGE_BOOST_VISIBILITY = 4500;
+      const CONVERGE_BOOST_ENDED = 1800;
+      const TIGHT_SYNC_DELAY_MS = 90;
+
+      const FAVICON_SIZE = 32;
+      const FAVICON_UPDATE_INTERVAL_MS = 66;
+      const DEFAULT_VIDEO_WIDTH = 500;
+      const DEFAULT_VIDEO_HEIGHT = 250;
+
+      const AUDIO_MAX_AGGRESSIVE = 0.042;
+      const AUDIO_MAX_NORMAL = 0.022;
+      const AUDIO_GAIN_AGGRESSIVE = 0.20;
+      const AUDIO_GAIN_NORMAL = 0.085;
+      const AUDIO_ERR_THRESHOLD = 0.003;
+
+      const VIDEO_MAX_AGGRESSIVE = 0.05;
+      const VIDEO_MAX_NORMAL = 0.025;
+      const VIDEO_GAIN_AGGRESSIVE = 0.22;
+      const VIDEO_GAIN_NORMAL = 0.09;
+      const VIDEO_ERR_THRESHOLD = 0.002;
+
       const audio = document.getElementById('audio');
       const gifContainer = document.getElementById('gif-container');
       const gifVideo = document.getElementById('gif-video');
       const startOverlay = document.getElementById('start-overlay');
 
-      let period = 29.71;
+      let period = DEFAULT_AUDIO_PERIOD;
       let lastEpoch = -1;
       let convergeUntil = 0;
       let rafId = null;
       let isPlaying = false;
       let started = false;
-      let videoDur = 0.44;
+      let videoDur = DEFAULT_VIDEO_DURATION;
 
       if (gifVideo) {
         gifVideo.addEventListener('loadedmetadata', () => {
@@ -87,24 +115,24 @@
       // Favicon: paint current video frame onto a 32×32 canvas (~15 fps).
       const favicon = document.getElementById('favicon');
       const favCanvas = document.createElement('canvas');
-      favCanvas.width = 32;
-      favCanvas.height = 32;
+      favCanvas.width = FAVICON_SIZE;
+      favCanvas.height = FAVICON_SIZE;
       const favCtx = favCanvas.getContext('2d');
       let lastFavUpdate = 0;
 
       function updateFavicon() {
         const now = performance.now();
-        if (now - lastFavUpdate < 66) return;
+        if (now - lastFavUpdate < FAVICON_UPDATE_INTERVAL_MS) return;
         lastFavUpdate = now;
         if (!gifVideo || !favicon || gifVideo.readyState < 2) return;
-        favCtx.clearRect(0, 0, 32, 32);
-        const vw = gifVideo.videoWidth || 500;
-        const vh = gifVideo.videoHeight || 250;
-        const scale = Math.max(32 / vw, 32 / vh);
+        favCtx.clearRect(0, 0, FAVICON_SIZE, FAVICON_SIZE);
+        const vw = gifVideo.videoWidth || DEFAULT_VIDEO_WIDTH;
+        const vh = gifVideo.videoHeight || DEFAULT_VIDEO_HEIGHT;
+        const scale = Math.max(FAVICON_SIZE / vw, FAVICON_SIZE / vh);
         const dw = vw * scale;
         const dh = vh * scale;
-        const dx = (32 - dw) / 2;
-        const dy = (32 - dh) / 2;
+        const dx = (FAVICON_SIZE - dw) / 2;
+        const dy = (FAVICON_SIZE - dh) / 2;
         favCtx.drawImage(gifVideo, dx, dy, dw, dh);
         try {
           favicon.href = favCanvas.toDataURL('image/png');
@@ -119,7 +147,7 @@
       if (audio.readyState >= 1 && isFinite(audio.duration)) updateDuration(audio.duration);
 
       function getPhase() {
-        const t = Date.now() / 1000;
+        const t = Date.now() / MS_PER_SEC;
         return ((t % period) + period) % period;
       }
 
@@ -133,30 +161,30 @@
         rafId = requestAnimationFrame(tightSync);
 
         const now = Date.now();
-        const epoch = Math.floor(now / 1000 / period);
+        const epoch = Math.floor(now / MS_PER_SEC / period);
         if (epoch !== lastEpoch) {
           lastEpoch = epoch;
-          boostConverge(2500);
+          boostConverge(CONVERGE_BOOST_NEW_EPOCH);
         }
 
         const aggressive = now < convergeUntil;
 
         // Audio: nudge playbackRate toward wall-clock phase (no mid-play seeks).
         const aErr = getPhase() - audio.currentTime;
-        const aMax = aggressive ? 0.042 : 0.022;
-        const aGain = aggressive ? 0.20 : 0.085;
-        audio.playbackRate = Math.abs(aErr) > 0.003
+        const aMax = aggressive ? AUDIO_MAX_AGGRESSIVE : AUDIO_MAX_NORMAL;
+        const aGain = aggressive ? AUDIO_GAIN_AGGRESSIVE : AUDIO_GAIN_NORMAL;
+        audio.playbackRate = Math.abs(aErr) > AUDIO_ERR_THRESHOLD
           ? 1 + Math.max(-aMax, Math.min(aMax, aErr * aGain))
           : 1.0;
 
         // Video: same idea, slightly looser gains, shortest-path error across loop.
         if (gifVideo) {
-          let gErr = (now / 1000 % videoDur) - gifVideo.currentTime;
+          let gErr = (now / MS_PER_SEC % videoDur) - gifVideo.currentTime;
           if (gErr > videoDur / 2) gErr -= videoDur;
           if (gErr < -videoDur / 2) gErr += videoDur;
-          const gMax = aggressive ? 0.05 : 0.025;
-          const gGain = aggressive ? 0.22 : 0.09;
-          gifVideo.playbackRate = Math.abs(gErr) > 0.002
+          const gMax = aggressive ? VIDEO_MAX_AGGRESSIVE : VIDEO_MAX_NORMAL;
+          const gGain = aggressive ? VIDEO_GAIN_AGGRESSIVE : VIDEO_GAIN_NORMAL;
+          gifVideo.playbackRate = Math.abs(gErr) > VIDEO_ERR_THRESHOLD
             ? 1 + Math.max(-gMax, Math.min(gMax, gErr * gGain))
             : 1.0;
         }
@@ -168,15 +196,15 @@
         const phase = getPhase();
         audio.currentTime = phase;
         audio.playbackRate = 1.0;
-        lastEpoch = Math.floor(Date.now() / 1000 / period);
+        lastEpoch = Math.floor(Date.now() / MS_PER_SEC / period);
 
         audio.play().then(() => {
           isPlaying = true;
           started = true;
           if (startOverlay) startOverlay.style.display = 'none';
           if (gifVideo) gifVideo.play().catch(() => {});
-          boostConverge(9000);
-          setTimeout(() => { if (isPlaying) tightSync(); }, 90);
+          boostConverge(CONVERGE_BOOST_START);
+          setTimeout(() => { if (isPlaying) tightSync(); }, TIGHT_SYNC_DELAY_MS);
         }).catch(() => {
           started = false;
         });
@@ -187,7 +215,7 @@
           if (startOverlay) startOverlay.style.display = 'none';
           startPlayback();
         } else if (isPlaying) {
-          boostConverge(5500);
+          boostConverge(CONVERGE_BOOST_INTERACT);
         }
       }
 
@@ -210,14 +238,14 @@
           onInteract();
         }
         if (e.key.toLowerCase() === 'r' && isPlaying) {
-          boostConverge(6000);
+          boostConverge(CONVERGE_BOOST_R_KEY);
         }
       });
 
       function prime() {
         try { audio.currentTime = getPhase(); } catch (_) {}
         if (gifVideo) {
-          try { gifVideo.currentTime = (Date.now() / 1000) % videoDur; } catch (_) {}
+          try { gifVideo.currentTime = (Date.now() / MS_PER_SEC) % videoDur; } catch (_) {}
         }
       }
       prime();
@@ -225,13 +253,13 @@
 
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && isPlaying) {
-          boostConverge(4500);
-          lastEpoch = Math.floor(Date.now() / 1000 / period);
+          boostConverge(CONVERGE_BOOST_VISIBILITY);
+          lastEpoch = Math.floor(Date.now() / MS_PER_SEC / period);
         }
       });
 
       audio.addEventListener('ended', () => {
-        if (isPlaying) boostConverge(1800);
+        if (isPlaying) boostConverge(CONVERGE_BOOST_ENDED);
       });
 
       // Muted teaser before click; rate lock-in happens after startPlayback.
