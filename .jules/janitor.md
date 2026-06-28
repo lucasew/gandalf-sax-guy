@@ -1,0 +1,1 @@
+- 2026-06-28: Replaced hardcoded magic numbers with descriptive constants to improve readability and maintainability without altering runtime behavior.
