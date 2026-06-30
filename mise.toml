@@ -1,0 +1,3 @@
+[tasks]
+test = "echo 'No tests to run'"
+ci = "echo 'No CI to run'"
