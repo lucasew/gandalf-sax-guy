@@ -65,6 +65,11 @@
 
   <script>
     (function () {
+      function reportError(error, context) {
+        console.error(`[ErrorReporter] ${context || 'Unexpected error'}:`, error);
+        // Centralized error reporting point (e.g., Sentry could be integrated here)
+      }
+
       const DEFAULT_AUDIO_PERIOD = 29.71;
       const DEFAULT_VIDEO_DURATION = 0.44;
       const MS_PER_SEC = 1000;
@@ -136,7 +141,9 @@
         favCtx.drawImage(gifVideo, dx, dy, dw, dh);
         try {
           favicon.href = favCanvas.toDataURL('image/png');
-        } catch (_) {}
+        } catch (err) {
+          reportError(err, 'Failed to update favicon');
+        }
       }
 
       function updateDuration(d) {
@@ -202,11 +209,14 @@
           isPlaying = true;
           started = true;
           if (startOverlay) startOverlay.style.display = 'none';
-          if (gifVideo) gifVideo.play().catch(() => {});
+          if (gifVideo) gifVideo.play().catch((err) => {
+            reportError(err, 'Failed to play video');
+          });
           boostConverge(CONVERGE_BOOST_START);
           setTimeout(() => { if (isPlaying) tightSync(); }, TIGHT_SYNC_DELAY_MS);
-        }).catch(() => {
+        }).catch((err) => {
           started = false;
+          reportError(err, 'Failed to start audio playback');
         });
       }
 
@@ -243,9 +253,13 @@
       });
 
       function prime() {
-        try { audio.currentTime = getPhase(); } catch (_) {}
+        try { audio.currentTime = getPhase(); } catch (err) {
+          reportError(err, 'Failed to set audio phase in prime()');
+        }
         if (gifVideo) {
-          try { gifVideo.currentTime = (Date.now() / MS_PER_SEC) % videoDur; } catch (_) {}
+          try { gifVideo.currentTime = (Date.now() / MS_PER_SEC) % videoDur; } catch (err) {
+            reportError(err, 'Failed to set video phase in prime()');
+          }
         }
       }
       prime();
@@ -263,7 +277,11 @@
       });
 
       // Muted teaser before click; rate lock-in happens after startPlayback.
-      if (gifVideo) gifVideo.play().catch(() => {});
+      if (gifVideo) {
+        gifVideo.play().catch((err) => {
+          reportError(err, 'Failed to play muted teaser video');
+        });
+      }
 
       function faviconLoop() {
         updateFavicon();
