@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,83 +7,18 @@
   <link rel="preload" href="giphy.webm" as="video">
   <link rel="preload" href="epicsaxguy.mp3" as="audio">
   <link rel="icon" id="favicon" href="favicon.png" type="image/png">
-  <style>
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0; padding: 0;
-      height: 100%;
-      background: #000;
-      overflow: hidden;
-    }
-    #gif-container {
-      position: fixed;
-      inset: 0;
-      background: #000;
-      overflow: hidden;
-      cursor: pointer;
-    }
-    #gif-container video {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-
-    .overlay-content {
-      text-align: center;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-    .overlay-title {
-      font-size: 2.2rem;
-      font-weight: 700;
-      letter-spacing: 6px;
-      margin-bottom: 8px;
-    }
-    .overlay-subtitle {
-      font-size: 0.8rem;
-      opacity: 0.6;
-      letter-spacing: 3px;
-    }
-    .overlay-link-container {
-      font-size: 0.55rem;
-      opacity: 0.4;
-      margin-top: 10px;
-      letter-spacing: 1px;
-    }
-    .overlay-link {
-      color: #f4c95d;
-      text-decoration: underline;
-    }
-
-    #start-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      color: #f4c95d;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      font-size: 1rem;
-      text-transform: uppercase;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <div id="gif-container">
-    <video id="gif-video" src="giphy.webm" loop muted playsinline></video>
+  </head>
+<body style="margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden;">
+  <div id="gif-container" style="box-sizing: border-box; position: fixed; inset: 0; background: #000; overflow: hidden; cursor: pointer;">
+    <video id="gif-video" src="giphy.webm" loop muted playsinline style="box-sizing: border-box; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"></video>
   </div>
 
-  <div id="start-overlay">
-    <div class="overlay-content">
-      <div class="overlay-title">CLICK TO START</div>
-      <div class="overlay-subtitle">GANDALF SAX GUY — SYNCED</div>
-      <div class="overlay-link-container">
-        <a href="https://github.com/lucasew/gandalf-sax-guy" target="_blank" rel="noopener noreferrer" class="overlay-link">github.com/lucasew/gandalf-sax-guy</a>
+  <div id="start-overlay" style="box-sizing: border-box; position: fixed; inset: 0; background: rgba(0,0,0,0.75); color: #f4c95d; display: flex; align-items: center; justify-content: center; z-index: 1000; font-size: 1rem; text-transform: uppercase; cursor: pointer;">
+    <div style="box-sizing: border-box; text-align:center; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <div style="box-sizing: border-box; font-size: 2.2rem; font-weight: 700; letter-spacing: 6px; margin-bottom: 8px;">CLICK TO START</div>
+      <div style="box-sizing: border-box; font-size: 0.8rem; opacity: 0.6; letter-spacing: 3px;">GANDALF SAX GUY — SYNCED</div>
+      <div style="box-sizing: border-box; font-size:0.55rem; opacity:0.4; margin-top:10px; letter-spacing:1px;">
+        <a href="https://github.com/lucasew/gandalf-sax-guy" target="_blank" rel="noopener noreferrer" style="box-sizing: border-box; color:#f4c95d; text-decoration:underline;">github.com/lucasew/gandalf-sax-guy</a>
       </div>
     </div>
   </div>
