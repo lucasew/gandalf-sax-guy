@@ -31,6 +31,33 @@
       object-fit: cover;
     }
 
+
+    .overlay-content {
+      text-align: center;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .overlay-title {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: 6px;
+      margin-bottom: 8px;
+    }
+    .overlay-subtitle {
+      font-size: 0.8rem;
+      opacity: 0.6;
+      letter-spacing: 3px;
+    }
+    .overlay-link-container {
+      font-size: 0.55rem;
+      opacity: 0.4;
+      margin-top: 10px;
+      letter-spacing: 1px;
+    }
+    .overlay-link {
+      color: #f4c95d;
+      text-decoration: underline;
+    }
+
     #start-overlay {
       position: fixed;
       inset: 0;
@@ -52,11 +79,11 @@
   </div>
 
   <div id="start-overlay">
-    <div style="text-align:center; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-      <div style="font-size: 2.2rem; font-weight: 700; letter-spacing: 6px; margin-bottom: 8px;">CLICK TO START</div>
-      <div style="font-size: 0.8rem; opacity: 0.6; letter-spacing: 3px;">GANDALF SAX GUY — SYNCED</div>
-      <div style="font-size:0.55rem; opacity:0.4; margin-top:10px; letter-spacing:1px;">
-        <a href="https://github.com/lucasew/gandalf-sax-guy" target="_blank" rel="noopener noreferrer" style="color:#f4c95d; text-decoration:underline;">github.com/lucasew/gandalf-sax-guy</a>
+    <div class="overlay-content">
+      <div class="overlay-title">CLICK TO START</div>
+      <div class="overlay-subtitle">GANDALF SAX GUY — SYNCED</div>
+      <div class="overlay-link-container">
+        <a href="https://github.com/lucasew/gandalf-sax-guy" target="_blank" rel="noopener noreferrer" class="overlay-link">github.com/lucasew/gandalf-sax-guy</a>
       </div>
     </div>
   </div>
