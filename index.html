@@ -234,16 +234,18 @@
         }
       }
 
-      gifContainer.addEventListener('click', onInteract);
-      gifContainer.addEventListener('touchstart', onInteract, { passive: true });
+      function bindInteraction(el, handler) {
+        if (!el) return;
+        el.addEventListener('click', handler);
+        el.addEventListener('touchstart', handler, { passive: true });
+      }
 
+      bindInteraction(gifContainer, onInteract);
       if (startOverlay) {
-        startOverlay.addEventListener('click', onInteract);
-        startOverlay.addEventListener('touchstart', onInteract, { passive: true });
+        bindInteraction(startOverlay, onInteract);
         const repoLink = startOverlay.querySelector('a');
         if (repoLink) {
-          repoLink.addEventListener('click', (e) => e.stopPropagation());
-          repoLink.addEventListener('touchstart', (e) => e.stopPropagation());
+          bindInteraction(repoLink, (e) => e.stopPropagation());
         }
       }
 
