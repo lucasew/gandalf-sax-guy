@@ -158,6 +158,12 @@
       audio.addEventListener('durationchange', () => updateDuration(audio.duration));
       if (audio.readyState >= READY_STATE_HAVE_METADATA && isFinite(audio.duration)) updateDuration(audio.duration);
 
+      function calculatePlaybackRate(error, maxCorrection, gain, threshold) {
+        return Math.abs(error) > threshold
+          ? BASE_PLAYBACK_RATE + Math.max(-maxCorrection, Math.min(maxCorrection, error * gain))
+          : BASE_PLAYBACK_RATE;
+      }
+
       function getPhase() {
         const t = Date.now() / MS_PER_SEC;
         return ((t % period) + period) % period;
@@ -185,9 +191,7 @@
         const aErr = getPhase() - audio.currentTime;
         const aMax = aggressive ? AUDIO_MAX_AGGRESSIVE : AUDIO_MAX_NORMAL;
         const aGain = aggressive ? AUDIO_GAIN_AGGRESSIVE : AUDIO_GAIN_NORMAL;
-        audio.playbackRate = Math.abs(aErr) > AUDIO_ERR_THRESHOLD
-          ? BASE_PLAYBACK_RATE + Math.max(-aMax, Math.min(aMax, aErr * aGain))
-          : BASE_PLAYBACK_RATE;
+        audio.playbackRate = calculatePlaybackRate(aErr, aMax, aGain, AUDIO_ERR_THRESHOLD);
 
         // Video: same idea, slightly looser gains, shortest-path error across loop.
         if (gifVideo) {
@@ -196,9 +200,7 @@
           if (gErr < -videoDur / 2) gErr += videoDur;
           const gMax = aggressive ? VIDEO_MAX_AGGRESSIVE : VIDEO_MAX_NORMAL;
           const gGain = aggressive ? VIDEO_GAIN_AGGRESSIVE : VIDEO_GAIN_NORMAL;
-          gifVideo.playbackRate = Math.abs(gErr) > VIDEO_ERR_THRESHOLD
-            ? BASE_PLAYBACK_RATE + Math.max(-gMax, Math.min(gMax, gErr * gGain))
-            : BASE_PLAYBACK_RATE;
+          gifVideo.playbackRate = calculatePlaybackRate(gErr, gMax, gGain, VIDEO_ERR_THRESHOLD);
         }
       }
 

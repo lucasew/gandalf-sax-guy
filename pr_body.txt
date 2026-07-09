@@ -1,0 +1,23 @@
+This PR resolves a technical debt issue regarding code duplication in `index.html`.
+
+By extracting the mathematical playback rate clamping logic (`Math.abs`, `Math.min`, `Math.max`) into a reusable `calculatePlaybackRate` function, we DRY up the synchronization logic and make the main `tightSync()` function easier to read.
+
+### Assumptions
+- The clamping mathematical logic does not rely on closures and can safely be isolated into a pure helper function mapping inputs `error`, `maxCorrection`, `gain`, and `threshold` to a final playback rate modifier.
+- Applying this helper structure identically for both the audio and video sync logic retains exact behavior as previously observed.
+
+### Alternatives Not Chosen
+- Continuing to inline these duplicate mathematical lines to avoid "pre-optimization", but code-duplication scanning engines caught this so it was prioritized.
+- Pulling out generic math functions (like a general `clamp` function) instead of a specific playback rate calculation function.
+
+### How To Pivot
+- If a future requirement demands distinct sync clamping behavior entirely for video versus audio, we can either pass in another parameter or revert the function into two specialized methods.
+
+### Next Knobs
+1. Investigate applying `best-practices/web_quality` around permissions testing natively.
+2. Abstract other constants (like loop duration tracking) if multiple videos are ever supported.
+
+### Optional follow-ups
+- Run the debt scanner on the remaining "hardcoded_paths" issues found within `giphy.webm` metadata.
+- Consider refactoring event listeners to enforce passive listeners based on `web_quality` checks if they haven't been completed across all interactive components.
+- Check and fix remaining `long_line` code smells.
